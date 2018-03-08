@@ -1,5 +1,5 @@
 # bibliometrics
-Compute pratically all bibliometric indices actually known.
+Compute pratically all bibliometric indices actually known.<br/>
 Actually, every researcher come to terms with his/her bibliometric
 performance. There are many software to compute these indices, like
 Publish or Perish or Google Scholar. Anyway, these softwares require an
