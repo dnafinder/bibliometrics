@@ -1,4 +1,4 @@
-function bibliometrics(varargin)
+function bibliometrics(C,varargin)
 % BIBLIOMETRICS - Compute pratically all bibliometric indices actually known.
 % Compute pratically all bibliometric indices actually known.
 % Actually, every researcher come to terms with his/her bibliometric
@@ -71,14 +71,11 @@ function bibliometrics(varargin)
 %Input error handling
 p = inputParser;
 validationC = @(x) all(isnumeric(x)) && all(isreal(x)) && all(isfinite(x)) && isrow(x) && all(x>=0);
-defaultC=[48 28 9 1 31 27 23 41 13 29 0 15 0 0];
-addOptional(p,'C',defaultC,validationC);
-validationAY = @(x) all(isnumeric(x)) && all(isreal(x)) && all(isfinite(x)) && isrow(x) && all(x>0);
-defaultY=2000+[4 7 8 8 8 9 9 10 11 12 13 14 16 17];
-addOptional(p,'Y',defaultY,validationAY);
-defaultA=[8 9 10 7 11 11 7 5 4 8 8 8 14 8];
-addOptional(p,'A',defaultA,validationAY);
-parse(p,varargin{:});
+addRequired(p,'C',validationC);
+validationAY = @(x) isempty(x) || (all(isnumeric(x)) && all(isreal(x)) && all(isfinite(x)) && isrow(x) && all(x>0));
+addOptional(p,'Y',[],validationAY);
+addOptional(p,'A',[],validationAY);
+parse(p,C,varargin{:});
 C=p.Results.C; Y=p.Results.Y; A=p.Results.A;
 clear p default* validation*
 
