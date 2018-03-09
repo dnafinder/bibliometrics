@@ -70,9 +70,9 @@ function bibliometrics(C,varargin)
 
 %Input error handling
 p = inputParser;
-validationC = @(x) all(isnumeric(x)) && all(isreal(x)) && all(isfinite(x)) && isrow(x) && all(x>=0);
+validationC = @(x) all(isnumeric(x)) && all(isreal(x)) && all(isfinite(x)) && isrow(x) && all(x>=0) && fix(x)==x;
 addRequired(p,'C',validationC);
-validationAY = @(x) isempty(x) || (all(isnumeric(x)) && all(isreal(x)) && all(isfinite(x)) && isrow(x) && all(x>0));
+validationAY = @(x) isempty(x) || (all(isnumeric(x)) && all(isreal(x)) && all(isfinite(x)) && isrow(x) && all(x>0)) && fix(x)==x;
 addOptional(p,'Y',[],validationAY);
 addOptional(p,'A',[],validationAY);
 parse(p,C,varargin{:});
