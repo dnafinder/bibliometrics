@@ -70,9 +70,8 @@ function bibliometrics(C,varargin)
 
 %Input error handling
 p = inputParser;
-validationC = @(x) all(isnumeric(x)) && all(isreal(x)) && all(isfinite(x)) && isrow(x) && all(x>=0) && fix(x)==x;
-addRequired(p,'C',validationC);
-validationAY = @(x) isempty(x) || (all(isnumeric(x)) && all(isreal(x)) && all(isfinite(x)) && isrow(x) && all(x>0)) && fix(x)==x;
+addRequired(p,'C',@(x) validateattributes(x,{'numeric'},{'row','real','finite','nonnan','nonnegative'}));
+validationAY = @(x) isempty(x) || (all(isnumeric(x(:))) && isrow(x) && all(isreal(x(:))) && all(isfinite(x(:))) && ~all(isnan(x(:))) && all(x(:)>0) && all(fix(x(:))==x(:)));
 addOptional(p,'Y',[],validationAY);
 addOptional(p,'A',[],validationAY);
 parse(p,C,varargin{:});
@@ -111,6 +110,9 @@ F=x./max(x);
 L=cC/Ctot; 
 Gcoeff=1-2*trapz(F,L);
 fprintf('Gini''s coefficient: %0.2f\n',Gcoeff')
+scrsz = get(groot,'ScreenSize');
+hfig1=figure; POS=scrsz; POS(3)=POS(3)/2;
+set(hfig1,'Position',POS)
 hold on
 patch([0 1 1 0],[0 1 0 0],[192 192 192]./255)
 patch([0 F 1 0],[0 L 0 0],'w')
@@ -122,6 +124,7 @@ hold off
 title('Lorenz curve of citations'); xlabel('% of papers'); ylabel('% of citations')
 legend([Le1 Le2 Le3],'Line of perfect inequality','Line of perfect equality','Lorenz curve','Location','NorthEastOutside')
 axis square
+
 disp(tr)
 if ~isempty(Y)
     Ny=(str2double(datestr(now,'yyyy'))-Y);
@@ -347,17 +350,18 @@ if ~isempty(Y) && ~isempty(A)
     fprintf('Harzing''s AR-index (AR-index) normalized per authors: %0.2f\n',realsqrt(HAWCRN));
     disp(tr)
 end
-figure
+hfig2=figure; POS(1)=POS(1)+POS(3);
+set(hfig2,'Position',POS)
 subplot(2,3,2); plot(x2,Csorted,'b.',x2,Csorted,'r-',x2,x2,'k-')
-title('Kosmulski''s h2-index plot'); xlabel('Squared Paper Rank'); ylabel('Citations'); 
+title(sprintf('Kosmulski''s\nh2-index')); xlabel('Squared Paper Rank'); ylabel('Citations'); 
 subplot(2,3,3); plot(x2,cC,'b.',x2,cC,'r-',x2,x2,'k-')
-title('Egghe''s g-index plot'); xlabel('Squared Paper Rank'); ylabel('Cumulative sum of Citations'); 
+title(sprintf('Egghe''s\ng-index')); xlabel('Squared Paper Rank'); ylabel('Cumulative sum of Citations'); 
 subplot(2,3,4); plot(x,Sc,'b.',x,Sc,'r-',x,x,'k-')
-title('Sidiropoulos''s hc-index plot'); xlabel('Paper Rank'); ylabel('Age weighted citations'); 
+title(sprintf('Sidiropoulos''s\nhc-index')); xlabel('Paper Rank'); ylabel('Age weighted citations'); 
 subplot(2,3,5); plot(x,SAH,'b.',x,SAH,'r-',x,x,'k-'); 
-title('Harzing''s hI,norm-index plot'); xlabel('Paper Rank'); ylabel('Authors weighted Citations'); 
+title(sprintf('Harzing''s\nhI,norm-index')); xlabel('Paper Rank'); ylabel('Authors weighted Citations'); 
 subplot(2,3,6); plot(xS,Csorted,'b.',xS,Csorted,'r-',xS,xS,'k-'); 
-title('Schreiber''s hm-index plot'); xlabel('Authors weighted Paper Rank'); ylabel('Citations'); 
+title(sprintf('Schreiber''s\nhm-index')); xlabel('Authors weighted Paper Rank'); ylabel('Citations'); 
 
 TC=sum(Csorted>0);
 X=zeros(Ctot,1);
