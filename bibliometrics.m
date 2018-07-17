@@ -25,13 +25,13 @@ function bibliometrics(C,varargin)
 %           - Descriptive statistics:
 %               ° Total number of papers
 %               ° Total number of citations
-%               ° Min, Max, Mode, Median and Mean citations per papers (with 95% confidence intervals)
+%               ° Min, Max, Mode, Median and Mean citations per papers
 %               ° Variation Coefficient (normal and adjusted)
 % 		      ° Gini's Coefficient
 %               ° Years of activity, first and last year of publication
-%               ° Min, Max, Mode, Median and Mean papers per year (with 95% confidence intervals)
+%               ° Min, Max, Mode, Median and Mean papers per year
 %               ° Mean number of citations per year
-%               ° Min, Max, Mode, Median and Mean Authors per paper (with 95% confidence intervals)
+%               ° Min, Max, Mode, Median and Mean Authors per paper
 %               ° Citations per author
 %           - Bibliometrics indices
 %               ° Citations indices
@@ -89,19 +89,11 @@ fprintf('Total number of citations: %i\n',Ctot)
 fprintf('Min: %i -  Max: %i\n',min(C),max(C))
 fprintf('Mode of citations per paper: %i\n',mode(C))
 fprintf('Median of citations per paper: %0.1f\n',median(C))
-if n<=20
-    I=binoinv(0.05,n,0.5);
-else
-    I=round((n-1.96*realsqrt(n))/2);
-end
-fprintf('95%% confidence interval: %0.1f - %0.1f\n',C(n-I+1),C(I))
-M=mean(C); D=std(C); SEM=D/sqrt(n); MCI=M+[-1 1].*1.96.*SEM; CV=D/M*100;
+M=mean(C); D=std(C); CV=D/M*100;
 fprintf('Mean number of citations per paper: %0.1f\n',M)
-fprintf('Standard error of mean (SEM): %0.2f\n',SEM)
-fprintf('95%% confidence interval: %0.1f - %0.1f\n',MCI)
 fprintf('Variation coefficient (CV): %0.2f%%\n',CV)
 fprintf('Adjusted Variation coefficient (CV''): %0.2f%%\n',CV*(1+1/(4*n)))
-clear M SEM MCI CV
+clear M D CV
 disp(' ')
 %The Lorenz Curve
 [Csorted,idx]=sort(C);
@@ -137,32 +129,15 @@ if ~isempty(Y)
     fprintf('Papers per year\t Min: %i \t Max: %i\n',min(cty),max(cty))
     fprintf('Mode of papers per year: %i\n',mode(cty))
     fprintf('Median of papers per year: %i\n',median(cty))
-    if lcty<=20
-        I=binoinv(0.05,n,0.5);
-    else
-        I=round((n-1.96*realsqrt(n))/2);
-    end
-    fprintf('95%% confidence interval: %0.1f - %0.1f\n',cty(lcty-I+1),cty(I))
-    M=mean(cty); SEM=std(cty)/sqrt(lcty); MCI=M+[-1 1].*1.96.*SEM;
-    fprintf('Mean number of papers per year: %0.1f\n',M)
-    fprintf('Standard error of mean (SEM): %0.2f\n',SEM)
-    fprintf('95%% confidence interval: %0.1f - %0.1f\n',MCI)
-    disp(' ')
+    fprintf('Mean number of papers per year: %0.1f\n',mean(cty))
     fprintf('Mean number of citations per year: %0.1f\n',Ctot/my)
     disp(tr)
 end
 if ~isempty(A)
     fprintf('Authors\tMin: %i -  Max: %i\n',min(A),max(A))
     fprintf('Mode of Authors per paper: %i\n',mode(A))
-    As=sort(A);
     fprintf('Median of Authors per paper: %0.1f\n',median(A))
-    fprintf('95%% confidence interval: %0.1f - %0.1f\n',As(n-I+1),As(I))
-    M=mean(A); SEM=std(A)/sqrt(n); MCI=M+[-1 1].*1.96.*SEM;
-    fprintf('Mean number of Authors per paper: %0.1f\n',M)
-    fprintf('Standard error of mean (SEM): %0.2f\n',SEM)
-    fprintf('95%% confidence interval: %0.1f - %0.1f\n',MCI)
-    clear As M SEM MCI
-    disp(' ')
+    fprintf('Mean number of Authors per paper: %0.1f\n',mean(A))
     fprintf('Citations per Author: %0.1f\n',sum(C./A))
     disp(tr)
 end
