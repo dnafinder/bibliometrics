@@ -156,7 +156,13 @@ disp('Citations indices'); disp(tr)
 %between 3 and 5. 
 Csorted=fliplr(Csorted); idx=fliplr(idx);
 Hidx=sum(Csorted>=x); H2=Hidx^2; 
-fprintf('Hirsch''s h-index: %i \t a: %0.2f',Hidx,Ctot/H2)
+%Fenner T. et al (2018) A novel bibliometric index with a simple geometric
+%interpretation - https://doi.org/10.1371/journal.pone.0200098
+
+z=Csorted.*(1:1:length(C));
+Chiidx=sqrt(find(z==max(z))); clear z
+fprintf('Hirsch''s h-index: %i \t a: %0.2f\t',Hidx,Ctot/H2)
+fprintf('Fenner''s chi-index: %0.4f',Chiidx)
 if ~isempty(Y)
     %One way to facilitate comparisons between academics with different
     %lengths of academic careers is to divide the h-index by the number of
@@ -307,8 +313,8 @@ if ~isempty(A)
 %citation counts to account for shared authorship of papers, and then
 %determines the multi-authored hm  index based on the resulting effective
 %rank of the papers using undiluted citation counts.
-    xS=x./AS;
-    Hmidx=sum(Csorted>=xS);
+    xS=cumsum(1./AS)'; yS=xS<=Csorted'; zS=xS(yS); 
+    Hmidx=zS(end);
     fprintf('Schreiber''s Multi-authored h-index (hm-index): %0.2f\n',Hmidx)
     disp(tr); disp(' '); 
 end
@@ -327,15 +333,15 @@ if ~isempty(Y) && ~isempty(A)
 end
 hfig2=figure; POS(1)=POS(1)+POS(3);
 set(hfig2,'Position',POS)
-subplot(2,3,2); plot(x2,Csorted,'b.',x2,Csorted,'r-',x2,x2,'k-')
+subplot(2,3,2); plot(x2,Csorted,'b.',x2,Csorted,'r-',x2,x2,'k-'); axis square
 title(sprintf('Kosmulski''s\nh2-index')); xlabel('Squared Paper Rank'); ylabel('Citations'); 
-subplot(2,3,3); plot(x2,cC,'b.',x2,cC,'r-',x2,x2,'k-')
+subplot(2,3,3); plot(x2,cC,'b.',x2,cC,'r-',x2,x2,'k-'); axis square
 title(sprintf('Egghe''s\ng-index')); xlabel('Squared Paper Rank'); ylabel('Cumulative sum of Citations'); 
-subplot(2,3,4); plot(x,Sc,'b.',x,Sc,'r-',x,x,'k-')
+subplot(2,3,4); plot(x,Sc,'b.',x,Sc,'r-',x,x,'k-'); axis square
 title(sprintf('Sidiropoulos''s\nhc-index')); xlabel('Paper Rank'); ylabel('Age weighted citations'); 
-subplot(2,3,5); plot(x,SAH,'b.',x,SAH,'r-',x,x,'k-'); 
+subplot(2,3,5); plot(x,SAH,'b.',x,SAH,'r-',x,x,'k-'); axis square
 title(sprintf('Harzing''s\nhI,norm-index')); xlabel('Paper Rank'); ylabel('Authors weighted Citations'); 
-subplot(2,3,6); plot(xS,Csorted,'b.',xS,Csorted,'r-',xS,xS,'k-'); 
+subplot(2,3,6); plot(xS,Csorted,'b.',xS,Csorted,'r-',xS,xS,'k-'); axis square 
 title(sprintf('Schreiber''s\nhm-index')); xlabel('Authors weighted Paper Rank'); ylabel('Citations'); 
 
 TC=sum(Csorted>0);
@@ -355,6 +361,7 @@ Xs=repmat(1:1:Hidx,1,Hidx);
 Ys=rldecode(repmat(Hidx,1,Hidx),1:1:Hidx);
 hold on
 scatter(Xs,Ys,4,'r')
+axis square
 hold off
 title(sprintf('Hirsch''s h-index as Durfee''s\n square on a Ferrers''es diagram'));  
 
