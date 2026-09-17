@@ -9,6 +9,7 @@ function R = bibliometrics(C,varargin)
 %   R = bibliometrics(C, Y, A, 'Period', [Y1 Y2])
 %   R = bibliometrics(C, Y, A, 'CareerEnd', YEAR)
 %   R = bibliometrics(C, Y, A, 'Plots', false)
+%   R = bibliometrics(C, Y, A, 'Interpret', false)
 %
 %   Description
 %   -----------
@@ -26,11 +27,15 @@ function R = bibliometrics(C,varargin)
 %   The function:
 %     - prints descriptive statistics for citations, years, and authors;
 %     - computes a large set of citation-based, age-weighted, and
-%       author-weighted indices;
+%       author-weighted indices, plus a second tier of extended indices
+%       (hg, w, maxprod, o, q2, tapered h);
 %     - builds a longitudinal publication/citation profile;
 %     - returns everything in a structured output R;
-%     - produces several diagnostic plots, including a Lorenz curve and
-%       graphical interpretations of h, g, h2, hc, hI,norm, hm.
+%     - optionally prints four plain-language interpretation flags
+%       (sustainedness, concentration, breadth vs depth, recent activity);
+%     - produces three figures: an overview (Lorenz curve and longitudinal
+%       profile), the classic index diagrams, and the extended-index
+%       diagrams.
 %
 %   Inputs
 %   ------
@@ -69,6 +74,15 @@ function R = bibliometrics(C,varargin)
 %                 keep only the Command Window report and the output R.
 %                 Useful in batch processing or on very large publication
 %                 lists, where the Ferrers diagram becomes expensive.
+%                 Default: true.
+%
+%   'Interpret' : logical scalar. Set to false to suppress the plain-
+%                 language "Interpretation flags" block from the printed
+%                 report. R.flags is still populated either way. The
+%                 flags are orientation heuristics, not judgements: each
+%                 compares the profile against itself or against a
+%                 published rule of thumb (cited inline), never against a
+%                 single external benchmark.
 %                 Default: true.
 %
 %   Outputs
@@ -130,6 +144,13 @@ function R = bibliometrics(C,varargin)
 %   R.indices.Harzing_AWCR_author_normalized  : Harzing's AWCR per author.
 %   R.indices.Harzing_AR_author_normalized    : Harzing's AR-index per author.
 %
+%   R.indices.Alonso_hg              : Alonso et al.'s hg-index.
+%   R.indices.Woeginger_w            : Woeginger's w-index.
+%   R.indices.Kosmulski_maxprod      : Kosmulski's maxprod-index.
+%   R.indices.DortaGonzalez_o        : Dorta-Gonzalez's o-index.
+%   R.indices.Cabrerizo_q2           : Cabrerizo et al.'s q2-index.
+%   R.indices.Anderson_ht            : Anderson et al.'s tapered h-index.
+%
 %   R.authors                        : [] when A is omitted, otherwise a
 %                                      structure with min, max, mode, median,
 %                                      mean and citations_per_author.
@@ -156,6 +177,24 @@ function R = bibliometrics(C,varargin)
 %   R.profile.cumulativePapers       : running total of publications.
 %   R.profile.cumulativeCitations    : running total of citations.
 %   R.profile.careerEnd              : career-end year, NaN when unused.
+%
+%   R.flags.sustainedness            : level/symbol/value/message on the
+%                                       m-index (pace of output).
+%   R.flags.concentration            : level/symbol/value/message on the
+%                                       Gini coefficient.
+%   R.flags.breadth                  : level/symbol/value/message on the
+%                                       g/h ratio.
+%   R.flags.recent_activity          : level/symbol/value/message on the
+%                                       last five years' share of papers
+%                                       and citations (never coloured).
+%   Each flags.* field has:
+%     .level    'green'/'yellow'/'red'/'info'/'n/a'
+%     .symbol   a plain-text tag ('[GREEN]'/'[YELLOW]'/'[RED]'/'[INFO]'),
+%               so the report renders identically on every terminal and
+%               font, with no dependency on colour-emoji glyph support
+%     .value    the underlying number (or a small struct for
+%               recent_activity)
+%     .message  the full plain-language sentence
 %
 %   The printed output includes, when possible:
 %     Descriptive statistics
@@ -196,19 +235,36 @@ function R = bibliometrics(C,varargin)
 %           aligned to the h-core ordering)
 %         - Harzing's AWCR and AR-index normalized per author
 %
+%       Extended indices (always printed; require only C)
+%         - Alonso et al.'s hg-index (geometric mean of h and g)
+%         - Woeginger's w-index
+%         - Kosmulski's maxprod-index
+%         - Dorta-Gonzalez's o-index
+%         - Cabrerizo et al.'s q2-index
+%         - Anderson et al.'s tapered h-index (ht)
+%
+%       Interpretation flags (suppressed by 'Interpret', false)
+%         - Sustainedness, concentration, breadth vs depth, recent
+%           activity - see R.flags above for details
+%
 %     Career-end descriptive profile (if 'CareerEnd' provided)
 %
 %   Figures
 %   -------
-%   Figure 1 : Lorenz curve of citations, with the lines of perfect equality
-%              and perfect inequality.
+%   Figure 1 : Overview, two panels - the Lorenz curve of citations (with
+%              the lines of perfect equality and perfect inequality, and
+%              the Gini coefficient in the title) and the longitudinal
+%              cumulative publications/citations profile against the
+%              publication year (right panel skipped if Y is not
+%              provided).
 %   Figure 2 : six panels, namely the Durfee square on the Ferrers diagram
 %              for the h-index, Kosmulski's h2-index, Egghe's g-index and,
 %              when the corresponding inputs are available, Sidiropoulos'
 %              hc-index, Harzing's hI,norm-index and Schreiber's hm-index.
-%   Figure 3 : cumulative publications and cumulative citations against the
-%              publication year, with the career-end marker when requested.
-%              Drawn only if Y is provided.
+%   Figure 3 : six panels for the extended indices - the w-index triangle
+%              threshold, the maxprod-index curve, a bar comparison for
+%              hg, a bar comparison for o, the q2-index h-core with its
+%              median line, and the cumulative tapered-h curve.
 %
 %   All figures are suppressed by 'Plots', false, and are skipped anyway
 %   when the dataset carries no citations at all.
@@ -242,6 +298,24 @@ function R = bibliometrics(C,varargin)
 %
 %   Changelog
 %   ---------
+%   2.4.1 - Switched the interpretation-flag symbols from Unicode colour
+%           emoji to plain-text tags ('[GREEN]'/'[YELLOW]'/'[RED]'/
+%           '[INFO]'): emoji rendering in the Command Window depends on
+%           the desktop/terminal font and colour-emoji glyph support,
+%           which is inconsistent across platforms, while text tags are
+%           font-independent.
+%   2.4.0 - Added six extended indices (hg, w, maxprod, o, q2, tapered h),
+%           reported both in the printed report and in R.indices under
+%           the Author_index naming convention (e.g. Woeginger_w) already
+%           used for the disambiguated indices; added the 'Interpret'
+%           option and four plain-language interpretation flags
+%           (sustainedness, concentration, breadth vs depth, recent
+%           activity), reported in the printed output and in R.flags,
+%           each with a Unicode traffic-light symbol; restructured the
+%           figures into three: an overview (Lorenz curve + longitudinal
+%           profile, merged from the former separate figures), the
+%           unchanged six-panel index diagrams, and a new six-panel
+%           extended-index diagram.
 %   2.3.1 - Restored the figures broken by the 2.3.0 refactoring (the
 %           plotting section still referred to the old variable names x, x2
 %           and cC); fixed the truncated Min/Max line; guarded the g-core
@@ -266,8 +340,8 @@ function R = bibliometrics(C,varargin)
 %   Email  : giuseppe.cardillo.75@gmail.com
 %   GitHub : https://github.com/dnafinder
 %   Created: 2010-01-01
-%   Updated: 2026-09-16
-%   Version: 2.3.1
+%   Updated: 2026-09-17
+%   Version: 2.4.1
 %
 %   License
 %   -------
@@ -294,6 +368,7 @@ addParameter(p,'Period',[],@(x) isempty(x) || ...
 addParameter(p,'CareerEnd',[],@(x) isempty(x) || ...
     (isnumeric(x) && isscalar(x) && isfinite(x) && fix(x)==x));
 addParameter(p,'Plots',true,@(x) (islogical(x) || isnumeric(x)) && isscalar(x));
+addParameter(p,'Interpret',true,@(x) (islogical(x) || isnumeric(x)) && isscalar(x));
 
 parse(p,C,varargin{:});
 C = p.Results.C;
@@ -302,6 +377,7 @@ A = p.Results.A;
 Period = p.Results.Period;
 CareerEnd = p.Results.CareerEnd;
 doPlots = logical(p.Results.Plots);
+doInterpret = logical(p.Results.Interpret);
 clear p validationAY
 
 n0 = numel(C);
@@ -502,6 +578,160 @@ if ~isempty(A)
     end
 end
 
+%% Extended indices
+% A second tier of citation indices, kept apart from the classic block
+% above so that the standard report stays uncluttered. All are computed
+% from C alone and therefore never require Y or A.
+HGidx = realsqrt(Hidx*Gidx);
+MaxProdidx = 0;
+Oidx = 0;
+Q2idx = 0;
+HTidx = 0;
+Widx = 0;
+
+if n > 0
+    MaxProdidx = max(rank .* Csorted);
+    if Hidx > 0
+        Oidx = realsqrt(Hidx*Csorted(1));
+        Q2idx = realsqrt(Hidx*median(Csorted(1:Hidx)));
+    end
+    tCsorted = min(Csorted,rank);
+    HTidx = sum(tCsorted./rank);
+
+    % Woeginger's w-index: the largest w such that the i-th most-cited
+    % paper has at least (w-i+1) citations for every i = 1..w. Solved in
+    % closed form (no explicit loop) via a cumulative minimum: U(i) is
+    % the largest w admissible by paper i alone, and w must not exceed
+    % the running minimum of U up to that rank.
+    U = Csorted + rank - 1;
+    CM = cummin(U);
+    lastValid = find(CM >= rank,1,'last');
+    if ~isempty(lastValid)
+        Widx = lastValid;
+    end
+end
+
+%% Interpretation flags
+% Four descriptive signals that translate the numeric indices into plain
+% language, computed once here and reused for both the printed report
+% and the R.flags output. These are orientation heuristics, not
+% judgements: each compares the profile against itself, or against a
+% published rule of thumb cited inline, never against a single external
+% benchmark. Symbols are plain-text tags ('[GREEN]' etc.), not emoji:
+% Command Window rendering of colour emoji depends on the desktop/
+% terminal font, which is inconsistent across platforms, while a text
+% tag always renders correctly. Suppressed entirely when 'Interpret' is
+% false, but still computed for R.flags unless Plots/Interpret logic
+% says otherwise - here they are always computed (cheap) and only the
+% report is gated.
+flags = struct();
+
+% --- Sustainedness: pace of output, h relative to elapsed years ---
+if hasY
+    if mIndex >= 1
+        flags.sustainedness.level = 'green';
+        flags.sustainedness.symbol = '[GREEN]';
+    elseif mIndex >= 0.5
+        flags.sustainedness.level = 'yellow';
+        flags.sustainedness.symbol = '[YELLOW]';
+    else
+        flags.sustainedness.level = 'red';
+        flags.sustainedness.symbol = '[RED]';
+    end
+    flags.sustainedness.value = mIndex;
+    flags.sustainedness.message = sprintf(['Sustainedness: m = %0.2f (h divided by elapsed years) - %s. ' ...
+        'Hirsch (2005) suggested m~1 as typical of a continuously active scientist; ' ...
+        'this is a rule of thumb, not a pass/fail threshold.'], mIndex, flags.sustainedness.level);
+else
+    flags.sustainedness.level = 'n/a';
+    flags.sustainedness.symbol = '';
+    flags.sustainedness.value = NaN;
+    flags.sustainedness.message = 'Sustainedness: not available (requires Y).';
+end
+
+% --- Concentration: Gini coefficient of the citation distribution ---
+if ~isnan(Gcoeff)
+    if Gcoeff < 0.35
+        flags.concentration.level = 'green';
+        flags.concentration.symbol = '[GREEN]';
+        giniWord = 'fairly even across the publication set';
+    elseif Gcoeff < 0.55
+        flags.concentration.level = 'yellow';
+        flags.concentration.symbol = '[YELLOW]';
+        giniWord = 'moderately concentrated: a handful of papers carry more weight than the rest';
+    else
+        flags.concentration.level = 'red';
+        flags.concentration.symbol = '[RED]';
+        giniWord = 'strongly concentrated: a small number of papers dominate the citation total';
+    end
+    flags.concentration.value = Gcoeff;
+    flags.concentration.message = sprintf(['Concentration: Gini = %0.2f - citations are %s ' ...
+        '(0 = perfectly even, 1 = a single paper holds everything).'], Gcoeff, giniWord);
+else
+    flags.concentration.level = 'n/a';
+    flags.concentration.symbol = '';
+    flags.concentration.value = NaN;
+    flags.concentration.message = 'Concentration: not available (total citations = 0).';
+end
+
+% --- Breadth vs depth: g/h ratio ---
+if Hidx > 0
+    ghRatio = Gidx/Hidx;
+    if ghRatio < 1.1
+        flags.breadth.level = 'yellow';
+        flags.breadth.symbol = '[YELLOW]';
+        breadthWord = 'a tightly concentrated profile: few papers carry almost all of the measurable impact';
+    elseif ghRatio <= 2
+        flags.breadth.level = 'green';
+        flags.breadth.symbol = '[GREEN]';
+        breadthWord = 'a balanced profile between a solid citation core and a longer tail';
+    elseif ghRatio <= 3
+        flags.breadth.level = 'yellow';
+        flags.breadth.symbol = '[YELLOW]';
+        breadthWord = 'a broad, long-tailed profile: many papers sit below the h-core';
+    else
+        flags.breadth.level = 'red';
+        flags.breadth.symbol = '[RED]';
+        breadthWord = 'an extremely long-tailed profile: the h-core is a small fraction of total output';
+    end
+    flags.breadth.value = ghRatio;
+    flags.breadth.message = sprintf('Breadth vs depth: g/h = %0.2f - %s.',ghRatio,breadthWord);
+else
+    flags.breadth.level = 'n/a';
+    flags.breadth.symbol = '';
+    flags.breadth.value = NaN;
+    flags.breadth.message = 'Breadth vs depth: not available (h = 0).';
+end
+
+% --- Recent activity: purely descriptive, deliberately uncoloured ---
+% A young paper's low citation count is a fact of its age, not a
+% shortcoming, so this signal never gets a red/yellow/green label.
+if hasY
+    recentMask = Y >= (currentYear-4);
+    nRecent = sum(recentMask);
+    cRecent = sum(C(recentMask));
+    pctPapersRecent = 100*nRecent/n;
+    pctCitRecent = safeDivide(100*cRecent,Ctot);
+    flags.recent_activity.level = 'info';
+    flags.recent_activity.symbol = '[INFO]';
+    flags.recent_activity.value = struct('n_recent',nRecent,'papers_percent',pctPapersRecent, ...
+        'citations_percent',pctCitRecent);
+    if isnan(pctCitRecent)
+        flags.recent_activity.message = sprintf(['Recent activity: %i of %i papers (%0.0f%%) were ' ...
+            'published in the last 5 years.'],nRecent,n,pctPapersRecent);
+    else
+        flags.recent_activity.message = sprintf(['Recent activity: %i of %i papers (%0.0f%%) were ' ...
+            'published in the last 5 years, holding %0.0f%% of total citations - recent papers have had ' ...
+            'less time to accumulate citations, so a lower share here is expected, not a warning sign.'], ...
+            nRecent,n,pctPapersRecent,pctCitRecent);
+    end
+else
+    flags.recent_activity.level = 'n/a';
+    flags.recent_activity.symbol = '';
+    flags.recent_activity.value = struct();
+    flags.recent_activity.message = 'Recent activity: not available (requires Y).';
+end
+
 %% CareerEnd descriptive profile
 career = struct();
 career.enabled = ~isempty(CareerEnd);
@@ -583,7 +813,7 @@ end
 
 %% Structured output
 R = struct();
-R.version = '2.3.1';
+R.version = '2.4.1';
 R.n = n;
 
 R.citations.total = Ctot;
@@ -642,6 +872,13 @@ R.indices.Jin_AR_author_normalized = JARN;
 R.indices.Harzing_AWCR_author_normalized = HAWCRN;
 R.indices.Harzing_AR_author_normalized = HARN;
 
+R.indices.Alonso_hg = HGidx;
+R.indices.Woeginger_w = Widx;
+R.indices.Kosmulski_maxprod = MaxProdidx;
+R.indices.DortaGonzalez_o = Oidx;
+R.indices.Cabrerizo_q2 = Q2idx;
+R.indices.Anderson_ht = HTidx;
+
 if ~isempty(A)
     R.authors.min = min(A);
     R.authors.max = max(A);
@@ -656,6 +893,7 @@ end
 R.period = struct('enabled',~isempty(Period),'range',Period);
 R.career = career;
 R.profile = prof;
+R.flags = flags;
 
 %% Command Window output
 tr = repmat('-',1,80);
@@ -771,6 +1009,26 @@ if ~isempty(A) && hasY
     fprintf('Harzing''s AR-index normalized per authors: %0.2f\n',HARN);
 end
 
+disp(' ');
+disp('Extended indices');
+disp(tr);
+fprintf('Alonso''s hg-index: %0.2f\n',HGidx);
+fprintf('Woeginger''s w-index: %i\n',Widx);
+fprintf('Kosmulski''s maxprod-index: %i\n',MaxProdidx);
+fprintf('Dorta-Gonzalez''s o-index: %0.2f\n',Oidx);
+fprintf('Cabrerizo''s q2-index: %0.2f\n',Q2idx);
+fprintf('Anderson''s tapered h-index (ht): %0.2f\n',HTidx);
+
+if doInterpret
+    disp(' ');
+    disp('Interpretation flags');
+    disp(tr);
+    fprintf('%s %s\n',flags.sustainedness.symbol,flags.sustainedness.message);
+    fprintf('%s %s\n',flags.concentration.symbol,flags.concentration.message);
+    fprintf('%s %s\n',flags.breadth.symbol,flags.breadth.message);
+    fprintf('%s %s\n',flags.recent_activity.symbol,flags.recent_activity.message);
+end
+
 if career.enabled
     disp(tr);
     disp('Career-end descriptive profile');
@@ -803,14 +1061,17 @@ if Ctot == 0
     return
 end
 
-% -------------------------------------------------------------------------
-% Lorenz curve
-% -------------------------------------------------------------------------
 scrsz = get(groot,'ScreenSize');
-hfig1 = figure('Name','Bibliometrics - Lorenz curve');
 POS   = scrsz;
-POS(3)= POS(3)/2;
+POS(3)= POS(3)/3;
+
+% -------------------------------------------------------------------------
+% Figure 1: Overview - Lorenz curve and longitudinal profile
+% -------------------------------------------------------------------------
+hfig1 = figure('Name','Bibliometrics - Overview');
 set(hfig1,'Position',POS)
+
+subplot(1,2,1);
 hold on
 patch([0 1 1 0],[0 1 0 0],[192 192 192]./255)
 patch([0 F 1 0],[0 L 0 0],'w')
@@ -819,18 +1080,41 @@ plot([1 1],[0 1],'g','LineWidth',2)
 Le2 = plot([0 1],[0 1],'b--','LineWidth',2);
 Le3 = plot(F,L,'r-','LineWidth',2);
 hold off
-title('Lorenz curve of citations');
+title(sprintf('Lorenz curve of citations\n(Gini = %0.2f)',Gcoeff));
 xlabel('% of papers');
 ylabel('% of citations');
 legend([Le1 Le2 Le3], ...
     'Line of perfect inequality', ...
     'Line of perfect equality', ...
     'Lorenz curve', ...
-    'Location','NorthEastOutside')
+    'Location','SouthOutside')
 axis square
 
+subplot(1,2,2);
+if hasY
+    yyaxis left
+    plot(prof.year,prof.cumulativePapers,'-o','LineWidth',1.2);
+    ylabel('Cumulative publications');
+
+    yyaxis right
+    plot(prof.year,prof.cumulativeCitations,'-s','LineWidth',1.2);
+    ylabel('Cumulative citations');
+
+    xlabel('Publication year');
+    title('Longitudinal publication and citation profile');
+    grid on;
+
+    if ~isempty(CareerEnd)
+        xline(CareerEnd,'--','CareerEnd');
+    end
+else
+    axis off
+    text(0.5,0.5,'Longitudinal profile requires Y', ...
+        'HorizontalAlignment','center','Units','normalized');
+end
+
 % -------------------------------------------------------------------------
-% Index diagrams
+% Figure 2: Index diagrams
 % -------------------------------------------------------------------------
 hfig2   = figure('Name','Bibliometrics - Index diagrams');
 POS(1)  = POS(1) + POS(3);
@@ -907,26 +1191,69 @@ ylabel('Citations');
 title(sprintf('Hirsch''s h-index as Durfee''s\n square on a Ferrers''es diagram'));
 
 % -------------------------------------------------------------------------
-% Longitudinal profile
+% Figure 3: Extended indices
 % -------------------------------------------------------------------------
-if hasY
-    figure('Name','Bibliometrics - Longitudinal profile');
-    yyaxis left
-    plot(prof.year,prof.cumulativePapers,'-o','LineWidth',1.2);
-    ylabel('Cumulative publications');
+hfig3   = figure('Name','Bibliometrics - Extended indices');
+POS(1)  = POS(1) + POS(3);
+set(hfig3,'Position',POS)
 
-    yyaxis right
-    plot(prof.year,prof.cumulativeCitations,'-s','LineWidth',1.2);
-    ylabel('Cumulative citations');
-
-    xlabel('Publication year');
-    title('Longitudinal publication and citation profile');
-    grid on;
-
-    if ~isempty(CareerEnd)
-        xline(CareerEnd,'--','CareerEnd');
-    end
+subplot(2,3,1);
+stairs(rank,Csorted,'b-','LineWidth',1.2);
+hold on
+if Widx > 0
+    triX = 1:Widx;
+    triY = Widx - triX + 1;
+    stairs(triX,triY,'r--','LineWidth',1.5);
 end
+hold off
+axis square
+title(sprintf('Woeginger''s\nw-index'));
+xlabel('Paper Rank');
+ylabel('Citations');
+
+subplot(2,3,2);
+prodVec = rank.*Csorted;
+plot(rank,prodVec,'b.-');
+hold on
+[~,imaxprod] = max(prodVec);
+plot(rank(imaxprod),prodVec(imaxprod),'ro','MarkerFaceColor','r');
+hold off
+axis square
+title(sprintf('Kosmulski''s\nmaxprod-index'));
+xlabel('Paper Rank');
+ylabel('Rank x Citations');
+
+subplot(2,3,3);
+bar(categorical({'h','g','hg'},{'h','g','hg'}),[Hidx Gidx HGidx]);
+axis square
+title(sprintf('Alonso''s\nhg-index'));
+ylabel('Value');
+
+subplot(2,3,4);
+bar(categorical({'h','C_{max}','o'},{'h','C_{max}','o'}),[Hidx Csorted(1) Oidx]);
+axis square
+title(sprintf('Dorta-Gonzalez''s\no-index'));
+ylabel('Value');
+
+subplot(2,3,5);
+if Hidx > 0
+    bar(1:Hidx,Csorted(1:Hidx));
+    hold on
+    yline(median(Csorted(1:Hidx)),'r--','LineWidth',1.5);
+    hold off
+end
+axis square
+title(sprintf('Cabrerizo''s\nq2-index'));
+xlabel('Paper Rank (h-core)');
+ylabel('Citations');
+
+subplot(2,3,6);
+cumTapered = cumsum(tCsorted./rank);
+plot(rank,cumTapered,'b.-','LineWidth',1.2);
+axis square
+title(sprintf('Anderson''s\ntapered h-index'));
+xlabel('Paper Rank');
+ylabel('Cumulative tapered score');
 
 end
 
